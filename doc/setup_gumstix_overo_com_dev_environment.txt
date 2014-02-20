@@ -1,0 +1,20 @@
+
+1. Please read through (not go through every steps) http://gumstix.org/getting-started-guide.html, to see how to connect the hardware, and connect with PC for log output. Please note that if you already have an SD card with an image, you do not need to re-burn the image into the card, because we just update kernel. The purpose of reading this doc is to let you know the basic environment.
+
+
+2. Please read through http://gumstix.org/basic-cross-compilation.html, to be familar the kernel develop environmet. 
+
+3. Download the kernel source from github. We should get a stable version, and commit a stable kernel into our github. 
+
+4. build the kernel following the instructions in http://gumstix.org/basic-cross-compilation.html
+
+
+5. Put the new linux kernel image, uImage to SD card. Please note that we just need to replace the linux kernel, then every thing should work.
+
+
+6. Boot your device 
+
+
+
+
+

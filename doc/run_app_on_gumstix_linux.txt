@@ -1,0 +1,6 @@
+
+
+1. Please read http://gumstix.org/compile-code-on-my-gumstix.html
+
+
+2. A simple app is in vet-gumstix/trunk/code/app/app. Copy this app to gumstix overo COM, build it. To run this app, you need to add the checksum code in nic driver, which is in vet-gumstix/trunk/code/nic-driver. Please find the path that the nic driver is located, and replace the original one with this nic-driver in the linux kernel (following doc/setup_gumstix_overo_com_dev_environement.txt). Please check the diff, making sure you understand everything. Then re-build the linux kernel, and download the new kernel image uImage to the SD card. Now you are ok to run the app.
