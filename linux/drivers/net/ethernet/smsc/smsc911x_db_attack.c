@@ -60,6 +60,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_net.h>
 #include "smsc911x.h"
+#include <linux/time.h>
 
 #define SMSC_CHIPNAME		"smsc911x"
 #define SMSC_MDIONAME		"smsc911x-mdio"
@@ -1965,17 +1966,15 @@ r13, r14 : not used
 
 
 
-
 void swattARM(int *challenge, int size)
 {
      unsigned int addr;
      unsigned int counter;
      addr = (unsigned int)challenge;
-     counter = 16*1024*16;
+     counter = 0x1000000;
      challenge[11] = counter;
      if (size != 52)
         return;
-
 asm("label3:");
 asm(
 save_reglist              // save r0 to r14 in stack
@@ -1991,6 +1990,259 @@ init_checksum
 "msr cpsr_c,r11 \n\t"
 //".align 8\n\t"
 "checksum:"
+//block 1
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_1\n\t"
+"dp_attack_ret_1:\n\t"
+"adcs r1, r1, r9\n\t"  // C[i] = C[i] add mem[daddr]
+"eor r1, r1, r7\n\t"   // C[i] = C[i] xor C[i-2]
+"adcs r1, r1, r10\n\t" // C[i] = C[i] add randomness
+"eor r1, r1, r15\n\t"  // C[i] = C[i] xor PC
+"eor r1, r1, r8\n\t"   // C[i] = C[i] xor C[i-1]
+"adc r1, r1, r11\n\t" // C[i] = C[i] add addr
+"mrs r11, cpsr \n\t"
+"eor r1, r1, r11\n\t"
+"addcs r1, r12, r1, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"eor r10, r10, r1 \n\t" // randomness = randomness xor Ci
+"sub r12, r12, #1\n\t"
+//block 2
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_2\n\t"
+"dp_attack_ret_2:\n\t"
+"eor r2, r2, r9\n\t"  // C[i] = C[i] xor mem[daddr]
+"adcs r2, r2, r7\n\t"   // C[i] = C[i] add C[i-2]
+"eor r2, r2, r10\n\t" // C[i] = C[i] xor randomness
+"adcs r2, r2, r15\n\t"  // C[i] = C[i] add PC
+"adcs r2, r2, r1\n\t"   // C[i] = C[i] add C[i-1]
+"eor r2, r2, r11\n\t" // C[i] = C[i] xor addr
+"mrs r11, cpsr \n\t"
+"adcs r2, r2, r11\n\t"
+"eor r2, r12, r2, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"adc r10, r10, r2 \n\t" // randomness = randomness add Ci
+"sub r12, r12, #1\n\t"
+//block 3
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_3\n\t"
+"dp_attack_ret_3:\n\t"
+"adcs r3, r3, r9\n\t"  // C[i] = C[i] add mem[daddr]
+"eor r3, r3, r1\n\t"   // C[i] = C[i] xor C[i-2]
+"adcs r3, r3, r10\n\t" // C[i] = C[i] add randomness
+"eor r3, r3, r15\n\t"  // C[i] = C[i] xor PC
+"eor r3, r3, r2\n\t"   // C[i] = C[i] xor C[i-1]
+"adc r3, r3, r11\n\t" // C[i] = C[i] add addr
+"mrs r11, cpsr \n\t"
+"eor r3, r3, r11\n\t"
+"addcs r3, r12, r3, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"eor r10, r10, r3 \n\t" // randomness = randomness xor Ci
+"sub r12, r12, #1\n\t"
+//block 4
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_4\n\t"
+"dp_attack_ret_4:\n\t"
+"eor r4, r4, r9\n\t"  // C[i] = C[i] xor mem[daddr]
+"adcs r4, r4, r1\n\t"   // C[i] = C[i] add C[i-2]
+"eor r4, r4, r10\n\t" // C[i] = C[i] xor randomness
+"adcs r4, r4, r15\n\t"  // C[i] = C[i] add PC
+"adcs r4, r4, r3\n\t"   // C[i] = C[i] add C[i-1]
+"eor r4, r4, r11\n\t" // C[i] = C[i] xor addr
+"mrs r11, cpsr \n\t"
+"adcs r4, r4, r11\n\t"
+"eor r4, r12, r4, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"adc r10, r10, r4 \n\t" // randomness = randomness add Ci
+"sub r12, r12, #1\n\t"
+//block 5
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_5\n\t"
+"dp_attack_ret_5:\n\t"
+"adcs r5, r5, r9\n\t"  // C[i] = C[i] add mem[daddr]
+"eor r5, r5, r3\n\t"   // C[i] = C[i] xor C[i-2]
+"adcs r5, r5, r10\n\t" // C[i] = C[i] add randomness
+"eor r5, r5, r15\n\t"  // C[i] = C[i] xor PC
+"eor r5, r5, r4\n\t"   // C[i] = C[i] xor C[i-1]
+"adc r5, r5, r11\n\t" // C[i] = C[i] add addr
+"mrs r11, cpsr \n\t"
+"eor r5, r5, r11\n\t"
+"addcs r5, r12, r5, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"eor r10, r10, r5 \n\t" // randomness = randomness xor Ci
+"sub r12, r12, #1\n\t"
+//block 6
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_6\n\t"
+"dp_attack_ret_6:\n\t"
+"eor r6, r6, r9\n\t"  // C[i] = C[i] xor mem[daddr]
+"adcs r6, r6, r3\n\t"   // C[i] = C[i] add C[i-2]
+"eor r6, r6, r10\n\t" // C[i] = C[i] xor randomness
+"adcs r6, r6, r15\n\t"  // C[i] = C[i] add PC
+"adcs r6, r6, r5\n\t"   // C[i] = C[i] add C[i-1]
+"eor r6, r6, r11\n\t" // C[i] = C[i] xor addr
+"mrs r11, cpsr \n\t"
+"adcs r6, r6, r11\n\t"
+"eor r6, r12, r6, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"adc r10, r10, r6 \n\t" // randomness = randomness add Ci
+"sub r12, r12, #1\n\t"
+//block 7
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_7\n\t"
+"dp_attack_ret_7:\n\t"
+"adcs r7, r7, r9\n\t"  // C[i] = C[i] add mem[daddr]
+"eor r7, r7, r5\n\t"   // C[i] = C[i] xor C[i-2]
+"adcs r7, r7, r10\n\t" // C[i] = C[i] add randomness
+"eor r7, r7, r15\n\t"  // C[i] = C[i] xor PC
+"eor r7, r7, r6\n\t"   // C[i] = C[i] xor C[i-1]
+"adc r7, r7, r11\n\t" // C[i] = C[i] add addr
+"mrs r11, cpsr \n\t"
+"eor r7, r7, r11\n\t"
+"addcs r7, r12, r7, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"eor r10, r10, r7 \n\t" // randomness = randomness xor Ci
+"sub r12, r12, #1\n\t"
+//block 8
+"muls r11, r10, r10\n\t"   //T function
+"orr r11, r11,  #0x5\n\t"
+"add r10, r10, r11\n\t"
+"eor r11, r15, r10, LSR#24\n\t" //construct memory address to read
+"and r11, r11, #0xfffffffc\n\t" // daddr = addr & mask 
+"b dp_attack_8\n\t"
+"dp_attack_ret_8:\n\t"
+"eor r8, r8, r9\n\t"  // C[i] = C[i] xor mem[daddr]
+"adcs r8, r8, r5\n\t"   // C[i] = C[i] add C[i-2]
+"eor r8, r8, r10\n\t" // C[i] = C[i] xor randomness
+"adcs r8, r8, r15\n\t"  // C[i] = C[i] add PC
+"adcs r8, r8, r7\n\t"   // C[i] = C[i] add C[i-1]
+"eor r8, r8, r11\n\t" // C[i] = C[i] xor addr
+"mrs r11, cpsr \n\t"
+"adcs r8, r8, r11\n\t"
+"eor r8, r12, r8, ROR #1 \n\t" //r1 = ror_r1 eor status 
+"adc r10, r10, r8 \n\t" // randomness = randomness add Ci
+"subs r12, r12, #1\n\t"
+"bne checksum\n\t"
+"end_loop:"
+"save_checksum:"
+save_checksum
+
+
+//Forging DP attack
+"b jmp_over_attack\n\t"
+
+"dp_attack_1:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_1\n\t"
+
+"dp_attack_2:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_2\n\t"
+
+"dp_attack_3:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_3\n\t"
+
+"dp_attack_4:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_4\n\t"
+
+"dp_attack_5:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_5\n\t"
+
+"dp_attack_6:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_6\n\t"
+
+"dp_attack_7:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_7\n\t"
+
+"dp_attack_8:\n\t"
+"add r11, #0x500\n\t"
+"ldr r9, [r11]\n\t"
+"sub r11, #0x500\n\t"
+"b dp_attack_ret_8\n\t"
+"jmp_over_attack:\n\t"
+
+
+"mrs r11,cpsr \n\t"
+"bic r11,r11,#0xc0 \n\t"
+"msr cpsr_c,r11\n\t"
+//"pop {%0}  \n\t"
+restore_reglist
+:
+: "r"(addr)
+:  "r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10");
+asm("label4:");
+return;
+}
+
+void swattARM_end(void)
+{
+	return;
+}
+
+
+void swattARM_fake(int *challenge, int size)
+{
+     unsigned int addr;
+     unsigned int counter;
+     addr = (unsigned int)challenge;
+     counter = 16*1024*16;
+     challenge[11] = counter;
+     if (size != 52)
+        return;
+asm("label5:");
+asm(
+save_reglist              // save r0 to r14 in stack
+//"push {%0} \n\t"   // save challenge_addr in stack
+"mov r0, %0\n\t"   // r0 = challenge_addr
+// init checksum, store checksum init values from challenge[]
+".align 8\n\t"
+"init_checksum_dp:"
+init_checksum
+// disable interrupts
+"mrs r11,cpsr \n\t"
+"orr r11, r11, #0xd3 \n\t"  // disable FIR and IRQ and enter supervisor mode
+"msr cpsr_c,r11 \n\t"
+//".align 8\n\t"
+"checksum_dp:"
 //block 1
 "muls r11, r10, r10\n\t"   //T function
 "orr r11, r11,  #0x5\n\t"
@@ -2135,9 +2387,9 @@ init_checksum
 "eor r8, r12, r8, ROR #1 \n\t" //r1 = ror_r1 eor status 
 "adc r10, r10, r8 \n\t" // randomness = randomness add Ci
 "subs r12, r12, #1\n\t"
-"bne checksum\n\t"
-"end_loop:"
-"save_checksum:"
+"bne checksum_dp\n\t"
+"end_loop_dp:"
+"save_checksum_dp:"
 save_checksum
 "mrs r11,cpsr \n\t"
 "bic r11,r11,#0xc0 \n\t"
@@ -2147,25 +2399,35 @@ restore_reglist
 :
 : "r"(addr)
 :  "r0","r1","r2","r3","r4","r5","r6","r7","r8","r9","r10");
-asm("label4:");
+asm("label6:");
 return;
 }
 
+void swattARM_fake_end(void)
+{
+	return;
+}
 
 static int smsc911x_do_swatt(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
   //  int ret = 0;
   int i = 0;
   unsigned int buf[64];
-  printk("call do swatt, cmd %#x\n", cmd);
-  
+  for (i = 0; i < 64; i++)
+    buf[i] = 0xafafcbcb + i;
+  //printk("call do swatt, cmd %#x\n", cmd);
+  struct timeval tv, tvend;
+
   switch(cmd)
   {
   case ACENIC_IOCTL_SWATT:
+    do_gettimeofday(&tv);
     swattARM(buf, 52);
-    printk("checksum results:\n");
-    for (i = 0; i < 8; i++)
-      printk("buf[%d]:%#x\n", i, buf[i]);
+    do_gettimeofday(&tvend);
+    printk("swatt time %d usec\n", ((unsigned int)(tvend.tv_sec - tv.tv_sec))*1000000 + (unsigned int)(tvend.tv_usec - tv.tv_usec));
+    //printk("checksum results:\n");
+    //for (i = 0; i < 8; i++)
+    //  printk("buf[%d]:%#x\n", i, buf[i]);
     break;
   default:
     return -EOPNOTSUPP;

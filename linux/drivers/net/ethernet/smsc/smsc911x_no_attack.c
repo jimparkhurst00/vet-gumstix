@@ -60,6 +60,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_net.h>
 #include "smsc911x.h"
+#include <linux/time.h>
 
 #define SMSC_CHIPNAME		"smsc911x"
 #define SMSC_MDIONAME		"smsc911x-mdio"
@@ -1971,7 +1972,7 @@ void swattARM(int *challenge, int size)
      unsigned int addr;
      unsigned int counter;
      addr = (unsigned int)challenge;
-     counter = 16*1024*16;
+     counter = 0x1000000; //10*1024*1024;
      challenge[11] = counter;
      if (size != 52)
         return;
@@ -2157,15 +2158,21 @@ static int smsc911x_do_swatt(struct net_device *dev, struct ifreq *ifr, int cmd)
   //  int ret = 0;
   int i = 0;
   unsigned int buf[64];
-  printk("call do swatt, cmd %#x\n", cmd);
-  
+  for (i = 0; i < 64; i++)
+    buf[i] = 0xafafcbcb + i;
+  //printk("call do swatt, cmd %#x\n", cmd);
+  struct timeval tv, tvend;
+
   switch(cmd)
   {
   case ACENIC_IOCTL_SWATT:
+    do_gettimeofday(&tv);
     swattARM(buf, 52);
-    printk("checksum results:\n");
-    for (i = 0; i < 8; i++)
-      printk("buf[%d]:%#x\n", i, buf[i]);
+    do_gettimeofday(&tvend);
+    printk("swatt time %d usec\n", ((unsigned int)(tvend.tv_sec - tv.tv_sec))*1000000 + (unsigned int)(tvend.tv_usec - tv.tv_usec));
+    //printk("checksum results:\n");
+    //for (i = 0; i < 8; i++)
+    //  printk("buf[%d]:%#x\n", i, buf[i]);
     break;
   default:
     return -EOPNOTSUPP;
