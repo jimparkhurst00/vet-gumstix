@@ -1,3 +1,8 @@
 qemu/sd.img
 backup/
 linux/
+qemu/MLO
+qemu/gumstix-console-image-overo.tar.bz2
+qemu/u-boot.img
+qemu/uImage.oem
+qemu/modules.tgz
