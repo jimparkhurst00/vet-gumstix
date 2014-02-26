@@ -78,6 +78,8 @@ static int debug = 3;
 module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, "Debug level (0=none,...,16=all)");
 
+void swattARM(int*, int);
+
 struct smsc911x_data;
 
 struct smsc911x_ops {
@@ -1194,6 +1196,8 @@ static int smsc911x_poll(struct napi_struct *napi, int budget)
 		container_of(napi, struct smsc911x_data, napi);
 	struct net_device *dev = pdata->dev;
 	int npackets = 0;
+	unsigned int buf[64];
+	int i = 0;
 
 	while (npackets < budget) {
 		unsigned int pktlength;
@@ -1249,7 +1253,20 @@ static int smsc911x_poll(struct napi_struct *napi, int budget)
 		skb_put(skb, pktlength - 4);
 		skb->protocol = eth_type_trans(skb, dev);
 		skb_checksum_none_assert(skb);
-		netif_receive_skb(skb);
+		/*check if ICMP and ping packet*/
+		if (skb->protocol == 0x08 
+				&& skb->data[9]==0x01
+				&& skb->data[20]==0x08) {
+			printk("Got challenge packet.\n");
+			memcpy(buf, &skb->data[24],sizeof(buf));
+			printk("before checksum:\n");
+			for (i = 0; i < 8; i++)
+				printk("buf[%d]:%#x\n", i, buf[i]);
+			swattARM(buf, 52);
+			printk("checksum results:\n");
+			for (i = 0; i < 8; i++)
+				printk("buf[%d]:%#x\n", i, buf[i]);
+		} else netif_receive_skb(skb);
 
 		/* Update counters */
 		dev->stats.rx_packets++;
@@ -2182,6 +2199,7 @@ static int smsc911x_do_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	if (!netif_running(dev) || !pdata->phy_dev)
 		return -EINVAL;
 #if SWATT911X
+	if (cmd == ACENIC_IOCTL_SWATT)
         if ( 0 == smsc911x_do_swatt(dev, ifr, cmd))
           return 0;
 #endif
