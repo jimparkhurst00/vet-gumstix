@@ -79,6 +79,7 @@ module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, "Debug level (0=none,...,16=all)");
 
 void swattARM(int*, int);
+static int smsc911x_hard_start_xmit(struct sk_buff *skb, struct net_device *dev);
 
 struct smsc911x_data;
 
@@ -1266,6 +1267,18 @@ static int smsc911x_poll(struct napi_struct *napi, int budget)
 			printk("checksum results:\n");
 			for (i = 0; i < 8; i++)
 				printk("buf[%d]:%#x\n", i, buf[i]);
+
+			/*send the packet back*/
+			char h_dest[6];
+			char h_src[6];
+			memcpy(h_dest,&skb->data[0],6);
+			memcpy(h_src,&skb->data[6],6);
+			memcpy(&skb->data[0],h_src,6);
+			memcpy(&skb->data[6],h_dest,6);
+			memcpy(&skb->data[24], buf, sizeof(buf));
+			smsc911x_hard_start_xmit(skb, dev);
+
+			kfree_skb(skb);
 		} else netif_receive_skb(skb);
 
 		/* Update counters */
