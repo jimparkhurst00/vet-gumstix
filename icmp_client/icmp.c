@@ -34,6 +34,7 @@ unsigned short checksum(void *b, int len){
 int main(int argc, char* argv[]){
     if (argc != 2) {
         printf("Usage: %s TARGET_IP\n",argv[0]);
+        return 0;
     }
 
     struct sockaddr_in addr;
