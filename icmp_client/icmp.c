@@ -49,7 +49,7 @@ int main(int argc, char* argv[]){
     unsigned char packet[500];
     struct icmphdr* hdr = (struct icmphdr*)packet;
 
-    hdr -> type = VET_ICMP_HEADER;
+    hdr -> type = VET_ICMP_TYPE;
     hdr -> code = 0x00;
     hdr -> checksum = 0x0;
 
@@ -70,7 +70,7 @@ int main(int argc, char* argv[]){
     while (1){
         socklen_t addrlen = sizeof(struct sockaddr);
         int size = recvfrom(sock, packet, sizeof(packet), 0, (struct sockaddr*)&addr, &addrlen);
-        if (packet[20] == VET_ICMP_HEADER){
+        if (packet[20] == VET_ICMP_TYPE){
             printf("Got response:\n");
             data = (unsigned int*)&packet[20+sizeof(struct icmphdr)];
             for (i=0;i<64;i++) printf("%08x\n",data[i]);
