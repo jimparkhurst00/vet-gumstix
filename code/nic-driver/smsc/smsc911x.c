@@ -74,6 +74,7 @@ static int debug = 16;
 #else
 static int debug = 3;
 #endif
+#define VET_ICMP_TYPE 0x08
 
 module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, "Debug level (0=none,...,16=all)");
@@ -1198,7 +1199,7 @@ static int smsc911x_poll(struct napi_struct *napi, int budget)
 	struct net_device *dev = pdata->dev;
 	int npackets = 0;
 	unsigned int buf[64];
-	int i = 0;
+	int i = 0, ret = 0;
 
 	while (npackets < budget) {
 		unsigned int pktlength;
@@ -1248,37 +1249,59 @@ static int smsc911x_poll(struct napi_struct *napi, int budget)
 
 		pdata->ops->rx_readfifo(pdata,
 				 (unsigned int *)skb->data, pktwords);
-
 		/* Align IP on 16B boundary */
 		skb_reserve(skb, NET_IP_ALIGN);
 		skb_put(skb, pktlength - 4);
 		skb->protocol = eth_type_trans(skb, dev);
 		skb_checksum_none_assert(skb);
-		/*check if ICMP and ping packet*/
+		/*check if ICMP and header packet*/
 		if (skb->protocol == 0x08 
 				&& skb->data[9]==0x01
-				&& skb->data[20]==0x08) {
+				&& skb->data[20]==VET_ICMP_TYPE) {
 			printk("Got challenge packet.\n");
 			memcpy(buf, &skb->data[24],sizeof(buf));
-			printk("before checksum:\n");
+			/*printk("before checksum:\n");
 			for (i = 0; i < 8; i++)
-				printk("buf[%d]:%#x\n", i, buf[i]);
+				printk("buf[%d]:%#x\n", i, buf[i]);*/
 			swattARM(buf, 52);
-			printk("checksum results:\n");
+			/*printk("checksum results:\n");
 			for (i = 0; i < 8; i++)
-				printk("buf[%d]:%#x\n", i, buf[i]);
+				printk("buf[%d]:%#x\n", i, buf[i]);*/
 
 			/*send the packet back*/
-			char h_dest[6];
-			char h_src[6];
+			memcpy(&skb->data[24], buf, sizeof(buf));
+
+			/*modify ip header*/
+			unsigned char ip_dest[4];
+			unsigned char ip_src[4];
+			memcpy(ip_src,&skb->data[12],4);
+			memcpy(ip_dest,&skb->data[16],4);
+			memcpy(&skb->data[12],ip_dest,4);
+			memcpy(&skb->data[16],ip_src,4);
+
+			/*modify mac header*/
+			skb_push(skb,14);
+			unsigned char h_dest[6];
+			unsigned char h_src[6]={0xff,0xff,0xff,0xff,0xff,0xff};
 			memcpy(h_dest,&skb->data[0],6);
 			memcpy(h_src,&skb->data[6],6);
+			/*printk("DEST: ");
+			for (i=0;i<6;i++)
+				printk("%#x ",h_dest[i]);
+			printk("\n");
+			printk("SRC: ");
+			for (i=0;i<6;i++)
+				printk("%#x ",h_src[i]);
+			printk("\n");*/
 			memcpy(&skb->data[0],h_src,6);
 			memcpy(&skb->data[6],h_dest,6);
-			memcpy(&skb->data[24], buf, sizeof(buf));
-			smsc911x_hard_start_xmit(skb, dev);
 
-			kfree_skb(skb);
+
+			if (0!=(ret=smsc911x_hard_start_xmit(skb, dev)))
+				printk("Response sent failed: %d",ret);
+			else
+				printk("Response sent.\n");
+
 		} else netif_receive_skb(skb);
 
 		/* Update counters */
