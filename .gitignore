@@ -1,5 +1,6 @@
 qemu/sd.img
 backup/
+icmp_client/
 linux/
 qemu/MLO
 qemu/gumstix-console-image-overo.tar.bz2

@@ -74,7 +74,7 @@ static int debug = 16;
 #else
 static int debug = 3;
 #endif
-#define VET_ICMP_TYPE 0x08
+#define VET_ICMP_TYPE 0x02
 
 module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, "Debug level (0=none,...,16=all)");
@@ -1191,6 +1191,21 @@ smsc911x_rx_fastforward(struct smsc911x_data *pdata, unsigned int pktwords)
 	}
 }
 
+static unsigned short checksum(void *b, int len){
+    unsigned short *buf = b;
+    unsigned int sum=0;
+    unsigned short result;
+
+    for ( sum = 0; len > 1; len -= 2 )
+        sum += *buf++;
+    if ( len == 1 )
+        sum += *(unsigned char*)buf;
+    sum = (sum >> 16) + (sum & 0xFFFF);
+    sum += (sum >> 16);
+    result = ~sum;
+    return result;
+}
+
 /* NAPI poll function */
 static int smsc911x_poll(struct napi_struct *napi, int budget)
 {
@@ -1272,6 +1287,7 @@ static int smsc911x_poll(struct napi_struct *napi, int budget)
 			memcpy(&skb->data[24], buf, sizeof(buf));
 
 			/*modify ip header*/
+            *((unsigned short*)&skb->data[22]) = checksum(&skb->data[20],64*(sizeof(unsigned int)+4));
 			unsigned char ip_dest[4];
 			unsigned char ip_src[4];
 			memcpy(ip_src,&skb->data[12],4);
