@@ -1287,7 +1287,8 @@ static int smsc911x_poll(struct napi_struct *napi, int budget)
 			memcpy(&skb->data[24], buf, sizeof(buf));
 
 			/*modify ip header*/
-            *((unsigned short*)&skb->data[22]) = checksum(&skb->data[20],64*(sizeof(unsigned int)+4));
+            *((unsigned short*)&skb->data[22]) = 0;
+            *((unsigned short*)&skb->data[22]) = checksum(&skb->data[20],64*(sizeof(unsigned int))+4);
 			unsigned char ip_dest[4];
 			unsigned char ip_src[4];
 			memcpy(ip_src,&skb->data[12],4);
