@@ -44,7 +44,7 @@ static int __init hello_init( void )
 	pdbr_addr &= 0xFFFFC000;
 	pdbr_addr = 0xC0004000;
 
-	printk("Addr: %08x\n",pdbr_addr);
+	printk("Addr: %08x, current stack: %p\n",pdbr_addr,&addr);
 	
 	unsigned int* pdbr = (unsigned int*) pdbr_addr;
 	int i;
