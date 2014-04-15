@@ -113,7 +113,7 @@ static int __init hello_init( void )
 			: "r4"
 			);
 	for (i=0;i<1024*1024;i++){
-		if (i%(1024*16) == 0) printk("%02x ",((unsigned char*)0xC0000000)[i]);
+	   if (i%(1024*16) == 0) printk("%02x ",((unsigned char*)0xC0000000)[i]);
 	}
 	printk("\n");
 
