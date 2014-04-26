@@ -8,6 +8,8 @@
 # call from kernel build system
 
 obj-m	:= hello-module.o
+hello-module-objs := cache.o mmu.o pt.o
+MODCFLAGS := -O -Wall -DMODULE -D__KERNEL__
 
 #
 #----------------------------------------------------------------------------
