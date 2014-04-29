@@ -1,6 +1,6 @@
 #include "pt.h"
 //#include "cache_headers.h"
-
+#include <asm/tlbflush.h>
 #include <asm/io.h>
 #include <linux/slab.h>
 
@@ -12,25 +12,25 @@
 
 
 
-void arm_set_ttbr0(uint32_t value)
+void swatt_arm_set_ttbr0(uint32_t value)
 {
 	asm volatile(
 			"mcr	p15, 0, %0, c2, c0, 0\n\t"
-			"mov	pc, lr\n\t"
+			//"mov	pc, lr\n\t"
 			:
 			: "r"(value)
 			);
         return;
 }
 
-uint32_t arm_read_ttbr0(void)
+uint32_t swatt_arm_read_ttbr0(void)
 {
   uint32_t value;
   //	mrc	p15, 0, r0, c2, c0, 0
   //	mov	pc, lr
 	asm volatile(
-			"mrc	p15, 0, r0, c2, c0, 0\n\t"
-			"mov	pc, lr\n\t"
+			"mrc	p15, 0, %0, c2, c0, 0\n\t"
+			//"mov	pc, lr\n\t"
 			: "=r"(value)
 			);
 
@@ -38,13 +38,13 @@ uint32_t arm_read_ttbr0(void)
 
 }	
 
-void arm_set_ttbr1(uint32_t value)
+void swatt_arm_set_ttbr1(uint32_t value)
 {
   //	mcr	p15, 0, r0, c2, c0, 1
   //	mov	pc, lr
 	asm volatile(
 			"mcr	p15, 0, %0, c2, c0, 0\n\t"
-			"mov	pc, lr\n\t"
+			//"mov	pc, lr\n\t"
 			:
 			: "r"(value)
 			);
@@ -52,27 +52,27 @@ void arm_set_ttbr1(uint32_t value)
 
 }	
 
-uint32_t arm_read_ttbr1(void)
+uint32_t swatt_arm_read_ttbr1(void)
 {
   //	mrc	p15, 0, r0, c2, c0, 1
   //	mov	pc, lr
   uint32_t value;
 	asm volatile(
-			"mrc	p15, 0, r0, c2, c0, 1\n\t"
-			"mov	pc, lr\n\t"
+			"mrc	p15, 0, %0, c2, c0, 1\n\t"
+			//"mov	pc, lr\n\t"
 			: "=r"(value)
 			);
 	return value;
 }
 
 
-void arm_set_ttbcr(uint32_t value)
+void swatt_arm_set_ttbcr(uint32_t value)
 {
   //	mcr	p15, 0, r0, c2, c0, 2
   //	mov	pc, lr
 	asm volatile(
-			"mcr	p15, 0, r0, c2, c0, 2\n\t"
-			"mov	pc, lr\n\t"
+			"mcr	p15, 0, %0, c2, c0, 2\n\t"
+			//"mov	pc, lr\n\t"
 			:
 			: "r"(value)
 			);
@@ -81,14 +81,14 @@ void arm_set_ttbcr(uint32_t value)
 }
 
 
-uint32_t arm_get_ttbcr(void)
+uint32_t swatt_arm_get_ttbcr(void)
 {
   //	mrc	p15, 0, r0, c2, c0, 2
   //	mov	pc, lr
   uint32_t value;
 	asm volatile(
-			"mrc	p15, 0, r0, c2, c0, 2\n\t"
-			"mov	pc, lr\n\t"
+			"mrc	p15, 0, %0, c2, c0, 2\n\t"
+			//"mov	pc, lr\n\t"
 			: "=r"(value)
 			);
 	return value;
@@ -101,16 +101,20 @@ static uint32_t l1_pt[ARM_L1_PAGETABLE_ENTRIES] __attribute__(( aligned(16384),s
 
 void backup_os_pt(void)
 {
-	origin_ttbcr = arm_get_ttbcr();
-	origin_ttbr0 = arm_read_ttbr0();
-	origin_ttbr1 = arm_read_ttbr1();
+  //	origin_ttbcr = swatt_arm_get_ttbcr();
+        printk("origin ttbcr is %#x\n", origin_ttbcr);
+	//	origin_ttbr0 = swatt_arm_read_ttbr0();
+        printk("origin ttbro is %#x\n", origin_ttbr0);
+	//	origin_ttbr1 = swatt_arm_read_ttbr1();
+        printk("origin ttbr1 is %#x\n", origin_ttbr1);
+        printk("backup os pt is done\n");
 }
 
 void restore_os_pt(void)
 {
-	arm_set_ttbcr(origin_ttbcr);
-	arm_set_ttbr0(origin_ttbr0);
-	arm_set_ttbr1(origin_ttbr1);
+	swatt_arm_set_ttbcr(origin_ttbcr);
+	swatt_arm_set_ttbr0(origin_ttbr0);
+	swatt_arm_set_ttbr1(origin_ttbr1);
 }
 
 static void mm_create1M_mapping(vaddr_t vaddr, paddr_t paddr, uint32_t s_ns_access)
@@ -168,7 +172,7 @@ static void mm_create4K_mapping(vaddr_t vaddr, paddr_t paddr, uint32_t s_ns_acce
         l2_page_paddr = virt_to_phys(l2_page);
         p_l1_pte->fields.address = ((uint32_t)l2_page_paddr) >> ARM_VMSA_L2_PAGE_SHIFT;
 		
-		//MEMDEBUG("[mm_srv_create_mapping] Cannot find the L2 PTE, Now Update L1 PTE to be 0x%X\n", p_l1_pte->bytes);
+        //MEMDEBUG("[mm_srv_create_mapping] Cannot find the L2 PTE, Now Update L1 PTE to be 0x%X\n", p_l1_pte->bytes);
         
     }
 	
@@ -237,8 +241,8 @@ void load_new_pt(void)
 {
 	
         //	flush_cache_all();
-	arm_set_ttbr0(virt_to_phys(&l1_pt));
-	//	flush_tlb_all();
+	swatt_arm_set_ttbr0(virt_to_phys(&l1_pt));
+	flush_tlb_all();
 	
 	//invalidate caches
     //arm_invalidate_caches();
