@@ -1,5 +1,5 @@
 #include "pt.h"
-#include "cache_headers.h"
+//#include "cache_headers.h"
 
 #include <asm/io.h>
 #include <linux/slab.h>
@@ -11,12 +11,88 @@
 
 
 
-extern void arm_set_ttbr0(uint32_t value);
-extern void arm_set_ttbr1(uint32_t value);
-extern uint32_t arm_read_ttbr0(void);
-extern uint32_t arm_read_ttbr1(void);
-extern void arm_set_ttbcr(uint32_t value);
-extern uint32_t arm_get_ttbcr(void);
+
+void arm_set_ttbr0(uint32_t value)
+{
+	asm volatile(
+			"mcr	p15, 0, %0, c2, c0, 0\n\t"
+			"mov	pc, lr\n\t"
+			:
+			: "r"(value)
+			);
+        return;
+}
+
+uint32_t arm_read_ttbr0(void)
+{
+  uint32_t value;
+  //	mrc	p15, 0, r0, c2, c0, 0
+  //	mov	pc, lr
+	asm volatile(
+			"mrc	p15, 0, r0, c2, c0, 0\n\t"
+			"mov	pc, lr\n\t"
+			: "=r"(value)
+			);
+
+	return value;
+
+}	
+
+void arm_set_ttbr1(uint32_t value)
+{
+  //	mcr	p15, 0, r0, c2, c0, 1
+  //	mov	pc, lr
+	asm volatile(
+			"mcr	p15, 0, %0, c2, c0, 0\n\t"
+			"mov	pc, lr\n\t"
+			:
+			: "r"(value)
+			);
+	return;
+
+}	
+
+uint32_t arm_read_ttbr1(void)
+{
+  //	mrc	p15, 0, r0, c2, c0, 1
+  //	mov	pc, lr
+  uint32_t value;
+	asm volatile(
+			"mrc	p15, 0, r0, c2, c0, 1\n\t"
+			"mov	pc, lr\n\t"
+			: "=r"(value)
+			);
+	return value;
+}
+
+
+void arm_set_ttbcr(uint32_t value)
+{
+  //	mcr	p15, 0, r0, c2, c0, 2
+  //	mov	pc, lr
+	asm volatile(
+			"mcr	p15, 0, r0, c2, c0, 2\n\t"
+			"mov	pc, lr\n\t"
+			:
+			: "r"(value)
+			);
+	return;
+
+}
+
+
+uint32_t arm_get_ttbcr(void)
+{
+  //	mrc	p15, 0, r0, c2, c0, 2
+  //	mov	pc, lr
+  uint32_t value;
+	asm volatile(
+			"mrc	p15, 0, r0, c2, c0, 2\n\t"
+			"mov	pc, lr\n\t"
+			: "=r"(value)
+			);
+	return value;
+}
 
 static uint32_t origin_ttbcr;
 static uint32_t origin_ttbr0;
@@ -160,10 +236,9 @@ void mm_create_mapping(vaddr_t vaddr, paddr_t paddr, int create_option)
 void load_new_pt(void)
 {
 	
-	flush_cache_all();
+        //	flush_cache_all();
 	arm_set_ttbr0(virt_to_phys(&l1_pt));
-
-	flush_tlb_all();
+	//	flush_tlb_all();
 	
 	//invalidate caches
     //arm_invalidate_caches();
