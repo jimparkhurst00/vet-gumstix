@@ -270,6 +270,23 @@ static int __init hello_init( void )
     printk( "hello_init called\n" );
     backup_os_pt();
 	
+	// [TODO] You should find the correct physical memory region for the .text 
+	// and .data for the kernel module.
+	//text_start_vaddr = &hello_init;
+	//text_start_paddr = virt_to_phys((void*)text_start_vaddr);
+
+	//printk( "backup_os_pt\n" );
+	//backup_os_pt();
+	
+	//printk( "mm_create_mapping\n" );
+	//mm_create_mapping(text_start_vaddr, text_start_paddr, CREATE_1M_PAGE);
+
+	//printk( "load_new_pt\n" );
+	//load_new_pt();
+
+	//printk( "restore_os_pt\n" );
+	//restore_os_pt();
+
     printk("\n");
 
     printk("Well done.\n");
